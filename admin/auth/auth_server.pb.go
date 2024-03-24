@@ -7,18 +7,20 @@ package auth
 
 import (
 	context "context"
+	grpc "google.golang.org/grpc"
 )
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the kratos package it is being compiled against.
 var _ = new(context.Context)
+var _ = grpc.Version
 
 type AuthImpl struct {
 	cc AuthClient
 }
 
-func NewAuthImpl(client AuthClient) *AuthImpl {
-	return &AuthImpl{client}
+func NewAuthImpl(conn *grpc.ClientConn) *AuthImpl {
+	return &AuthImpl{cc: NewAuthClient(conn)}
 }
 
 func (c *AuthImpl) UserToken(ctx context.Context, in *UserTokenReq) (*UserTokenResp, error) {

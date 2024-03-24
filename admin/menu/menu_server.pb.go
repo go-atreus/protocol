@@ -7,18 +7,20 @@ package menu
 
 import (
 	context "context"
+	grpc "google.golang.org/grpc"
 )
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the kratos package it is being compiled against.
 var _ = new(context.Context)
+var _ = grpc.Version
 
 type MenuImpl struct {
 	cc MenuClient
 }
 
-func NewMenuImpl(client MenuClient) *MenuImpl {
-	return &MenuImpl{client}
+func NewMenuImpl(conn *grpc.ClientConn) *MenuImpl {
+	return &MenuImpl{cc: NewMenuClient(conn)}
 }
 
 func (c *MenuImpl) GetMenu(ctx context.Context, in *GetMenuReq) (*GetMenuResp, error) {
