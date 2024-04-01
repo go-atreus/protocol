@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
+	Auth_UserLogin_FullMethodName    = "/Atreus.auth.Auth/userLogin"
 	Auth_UserToken_FullMethodName    = "/Atreus.auth.Auth/userToken"
 	Auth_GetUserToken_FullMethodName = "/Atreus.auth.Auth/getUserToken"
 	Auth_ForceLogout_FullMethodName  = "/Atreus.auth.Auth/forceLogout"
@@ -29,6 +30,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthClient interface {
+	// login
+	UserLogin(ctx context.Context, in *UserLoginReq, opts ...grpc.CallOption) (*UserTokenResp, error)
 	// 生成token
 	UserToken(ctx context.Context, in *UserTokenReq, opts ...grpc.CallOption) (*UserTokenResp, error)
 	// 管理员获取用户 token
@@ -45,6 +48,15 @@ type authClient struct {
 
 func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
 	return &authClient{cc}
+}
+
+func (c *authClient) UserLogin(ctx context.Context, in *UserLoginReq, opts ...grpc.CallOption) (*UserTokenResp, error) {
+	out := new(UserTokenResp)
+	err := c.cc.Invoke(ctx, Auth_UserLogin_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *authClient) UserToken(ctx context.Context, in *UserTokenReq, opts ...grpc.CallOption) (*UserTokenResp, error) {
@@ -87,6 +99,8 @@ func (c *authClient) ParseToken(ctx context.Context, in *ParseTokenReq, opts ...
 // All implementations should embed UnimplementedAuthServer
 // for forward compatibility
 type AuthServer interface {
+	// login
+	UserLogin(context.Context, *UserLoginReq) (*UserTokenResp, error)
 	// 生成token
 	UserToken(context.Context, *UserTokenReq) (*UserTokenResp, error)
 	// 管理员获取用户 token
@@ -101,6 +115,9 @@ type AuthServer interface {
 type UnimplementedAuthServer struct {
 }
 
+func (UnimplementedAuthServer) UserLogin(context.Context, *UserLoginReq) (*UserTokenResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UserLogin not implemented")
+}
 func (UnimplementedAuthServer) UserToken(context.Context, *UserTokenReq) (*UserTokenResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UserToken not implemented")
 }
@@ -123,6 +140,24 @@ type UnsafeAuthServer interface {
 
 func RegisterAuthServer(s grpc.ServiceRegistrar, srv AuthServer) {
 	s.RegisterService(&Auth_ServiceDesc, srv)
+}
+
+func _Auth_UserLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserLoginReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).UserLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_UserLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).UserLogin(ctx, req.(*UserLoginReq))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Auth_UserToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -204,6 +239,10 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Atreus.auth.Auth",
 	HandlerType: (*AuthServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "userLogin",
+			Handler:    _Auth_UserLogin_Handler,
+		},
 		{
 			MethodName: "userToken",
 			Handler:    _Auth_UserToken_Handler,

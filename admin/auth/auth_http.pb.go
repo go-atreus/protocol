@@ -22,6 +22,7 @@ const _ = http.SupportPackageIsVersion1
 const OperationAuthforceLogout = "/Atreus.auth.Auth/forceLogout"
 const OperationAuthgetUserToken = "/Atreus.auth.Auth/getUserToken"
 const OperationAuthparseToken = "/Atreus.auth.Auth/parseToken"
+const OperationAuthuserLogin = "/Atreus.auth.Auth/userLogin"
 const OperationAuthuserToken = "/Atreus.auth.Auth/userToken"
 
 type AuthHTTPServer interface {
@@ -31,16 +32,41 @@ type AuthHTTPServer interface {
 	GetUserToken(context.Context, *GetUserTokenReq) (*GetUserTokenResp, error)
 	// ParseToken解析token
 	ParseToken(context.Context, *ParseTokenReq) (*ParseTokenResp, error)
+	// UserLoginlogin
+	UserLogin(context.Context, *UserLoginReq) (*UserTokenResp, error)
 	// UserToken生成token
 	UserToken(context.Context, *UserTokenReq) (*UserTokenResp, error)
 }
 
 func RegisterAuthHTTPServer(s *http.Server, srv AuthHTTPServer) {
 	r := s.Route("/")
+	r.POST("/auth/login", _Auth_UserLogin0_HTTP_Handler(srv))
 	r.POST("/auth/user_token", _Auth_UserToken0_HTTP_Handler(srv))
 	r.POST("/auth/get_user_token", _Auth_GetUserToken0_HTTP_Handler(srv))
 	r.POST("/auth/force_logout", _Auth_ForceLogout0_HTTP_Handler(srv))
 	r.POST("/auth/parse_token", _Auth_ParseToken0_HTTP_Handler(srv))
+}
+
+func _Auth_UserLogin0_HTTP_Handler(srv AuthHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UserLoginReq
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAuthuserLogin)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UserLogin(ctx, req.(*UserLoginReq))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*UserTokenResp)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _Auth_UserToken0_HTTP_Handler(srv AuthHTTPServer) func(ctx http.Context) error {
@@ -135,6 +161,7 @@ type AuthHTTPClient interface {
 	ForceLogout(ctx context.Context, req *ForceLogoutReq, opts ...http.CallOption) (rsp *ForceLogoutResp, err error)
 	GetUserToken(ctx context.Context, req *GetUserTokenReq, opts ...http.CallOption) (rsp *GetUserTokenResp, err error)
 	ParseToken(ctx context.Context, req *ParseTokenReq, opts ...http.CallOption) (rsp *ParseTokenResp, err error)
+	UserLogin(ctx context.Context, req *UserLoginReq, opts ...http.CallOption) (rsp *UserTokenResp, err error)
 	UserToken(ctx context.Context, req *UserTokenReq, opts ...http.CallOption) (rsp *UserTokenResp, err error)
 }
 
@@ -177,6 +204,19 @@ func (c *AuthHTTPClientImpl) ParseToken(ctx context.Context, in *ParseTokenReq, 
 	pattern := "/auth/parse_token"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationAuthparseToken))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AuthHTTPClientImpl) UserLogin(ctx context.Context, in *UserLoginReq, opts ...http.CallOption) (*UserTokenResp, error) {
+	var out UserTokenResp
+	pattern := "/auth/login"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationAuthuserLogin))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {

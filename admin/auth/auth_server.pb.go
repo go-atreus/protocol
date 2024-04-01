@@ -23,6 +23,10 @@ func NewAuthImpl(conn *grpc.ClientConn) *AuthImpl {
 	return &AuthImpl{cc: NewAuthClient(conn)}
 }
 
+func (c *AuthImpl) UserLogin(ctx context.Context, in *UserLoginReq) (*UserTokenResp, error) {
+	return c.cc.UserLogin(ctx, in)
+}
+
 func (c *AuthImpl) UserToken(ctx context.Context, in *UserTokenReq) (*UserTokenResp, error) {
 	return c.cc.UserToken(ctx, in)
 }
